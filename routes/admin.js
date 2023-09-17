@@ -43,9 +43,9 @@ const emailRegex = /\S+@\S+\.\S+/;
 const numericRegex = /^\d*\.?\d*$/;
 
 // Admin section
-router.get('/admin', restrict, (req, res, next) => {
-    res.redirect('/admin/dashboard');
-});
+// router.get('/admin', restrict, (req, res, next) => {
+//     res.redirect('/admin/dashboard');
+// });
 
 // logout
 router.get('/admin/logout', (req, res) => {
@@ -168,474 +168,474 @@ router.post('/admin/setup_action', async (req, res) => {
 });
 
 // dashboard
-router.get('/admin/dashboard', csrfProtection, restrict, async (req, res) => {
-    const db = req.app.db;
+// router.get('/admin/dashboard', csrfProtection, restrict, async (req, res) => {
+//     const db = req.app.db;
 
-    // Collate data for dashboard
-    const dashboardData = {
-        productsCount: await db.products.countDocuments({
-            productPublished: true
-        }),
-        ordersCount: await db.orders.countDocuments({}),
-        ordersAmount: await db.orders.aggregate([{ $match: {} },
-            { $group: { _id: null, sum: { $sum: '$orderTotal' } }
-        }]).toArray(),
-        productsSold: await db.orders.aggregate([{ $match: {} },
-            { $group: { _id: null, sum: { $sum: '$orderProductCount' } }
-        }]).toArray(),
-        topProducts: await db.orders.aggregate([
-            { $project: { _id: 0 } },
-            { $project: { o: { $objectToArray: '$orderProducts' } } },
-            { $unwind: '$o' },
-            { $group: {
-                    _id: '$o.v.title',
-                    productImage: { $last: '$o.v.productImage' },
-                    count: { $sum: '$o.v.quantity' }
-            } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
-        ]).toArray()
-    };
+//     // Collate data for dashboard
+//     const dashboardData = {
+//         productsCount: await db.products.countDocuments({
+//             productPublished: true
+//         }),
+//         ordersCount: await db.orders.countDocuments({}),
+//         ordersAmount: await db.orders.aggregate([{ $match: {} },
+//             { $group: { _id: null, sum: { $sum: '$orderTotal' } }
+//         }]).toArray(),
+//         productsSold: await db.orders.aggregate([{ $match: {} },
+//             { $group: { _id: null, sum: { $sum: '$orderProductCount' } }
+//         }]).toArray(),
+//         topProducts: await db.orders.aggregate([
+//             { $project: { _id: 0 } },
+//             { $project: { o: { $objectToArray: '$orderProducts' } } },
+//             { $unwind: '$o' },
+//             { $group: {
+//                     _id: '$o.v.title',
+//                     productImage: { $last: '$o.v.productImage' },
+//                     count: { $sum: '$o.v.quantity' }
+//             } },
+//             { $sort: { count: -1 } },
+//             { $limit: 5 }
+//         ]).toArray()
+//     };
 
-    // Fix aggregate data
-    if(dashboardData.ordersAmount.length > 0){
-        dashboardData.ordersAmount = dashboardData.ordersAmount[0].sum;
-    }
-    if(dashboardData.productsSold.length > 0){
-        dashboardData.productsSold = dashboardData.productsSold[0].sum;
-    }else{
-        dashboardData.productsSold = 0;
-    }
+//     // Fix aggregate data
+//     if(dashboardData.ordersAmount.length > 0){
+//         dashboardData.ordersAmount = dashboardData.ordersAmount[0].sum;
+//     }
+//     if(dashboardData.productsSold.length > 0){
+//         dashboardData.productsSold = dashboardData.productsSold[0].sum;
+//     }else{
+//         dashboardData.productsSold = 0;
+//     }
 
-    res.render('dashboard', {
-        title: 'Cart dashboard',
-        session: req.session,
-        admin: true,
-        dashboardData,
-        themes: getThemes(),
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        csrfToken: req.csrfToken()
-    });
-});
+//     res.render('dashboard', {
+//         title: 'Cart dashboard',
+//         session: req.session,
+//         admin: true,
+//         dashboardData,
+//         themes: getThemes(),
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
 // settings
-router.get('/admin/settings', csrfProtection, restrict, (req, res) => {
-    res.render('settings', {
-        title: 'Cart settings',
-        session: req.session,
-        admin: true,
-        themes: getThemes(),
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        footerHtml: typeof req.app.config.footerHtml !== 'undefined' ? escape.decode(req.app.config.footerHtml) : null,
-        googleAnalytics: typeof req.app.config.googleAnalytics !== 'undefined' ? escape.decode(req.app.config.googleAnalytics) : null,
-        csrfToken: req.csrfToken()
-    });
-});
+// router.get('/admin/settings', csrfProtection, restrict, (req, res) => {
+//     res.render('settings', {
+//         title: 'Cart settings',
+//         session: req.session,
+//         admin: true,
+//         themes: getThemes(),
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         footerHtml: typeof req.app.config.footerHtml !== 'undefined' ? escape.decode(req.app.config.footerHtml) : null,
+//         googleAnalytics: typeof req.app.config.googleAnalytics !== 'undefined' ? escape.decode(req.app.config.googleAnalytics) : null,
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
 // create API key
-router.post('/admin/createApiKey', restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
-    const result = await db.users.findOneAndUpdate({
-        _id: ObjectId(req.session.userId),
-        isAdmin: true
-    }, {
-        $set: {
-            apiKey: new ObjectId()
-        }
-    }, {
-        returnOriginal: false
-    });
+// router.post('/admin/createApiKey', restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
+//     const result = await db.users.findOneAndUpdate({
+//         _id: ObjectId(req.session.userId),
+//         isAdmin: true
+//     }, {
+//         $set: {
+//             apiKey: new ObjectId()
+//         }
+//     }, {
+//         returnOriginal: false
+//     });
 
-    if(result.value && result.value.apiKey){
-        res.status(200).json({ message: 'API Key generated', apiKey: result.value.apiKey });
-        return;
-    }
-    res.status(400).json({ message: 'Failed to generate API Key' });
-});
+//     if(result.value && result.value.apiKey){
+//         res.status(200).json({ message: 'API Key generated', apiKey: result.value.apiKey });
+//         return;
+//     }
+//     res.status(400).json({ message: 'Failed to generate API Key' });
+// });
 
 // settings update
-router.post('/admin/settings/update', restrict, checkAccess, (req, res) => {
-    const result = updateConfig(req.body);
-    if(result === true){
-        req.app.config = getConfig();
-        res.status(200).json({ message: 'Settings successfully updated' });
-        return;
-    }
-    res.status(400).json({ message: 'Permission denied' });
-});
+// router.post('/admin/settings/update', restrict, checkAccess, (req, res) => {
+//     const result = updateConfig(req.body);
+//     if(result === true){
+//         req.app.config = getConfig();
+//         res.status(200).json({ message: 'Settings successfully updated' });
+//         return;
+//     }
+//     res.status(400).json({ message: 'Permission denied' });
+// });
 
-// settings menu
-router.get('/admin/settings/menu', csrfProtection, restrict, async (req, res) => {
-    const db = req.app.db;
-    res.render('settings-menu', {
-        title: 'Cart menu',
-        session: req.session,
-        admin: true,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        menu: sortMenu(await getMenu(db)),
-        csrfToken: req.csrfToken()
-    });
-});
+// // settings menu
+// router.get('/admin/settings/menu', csrfProtection, restrict, async (req, res) => {
+//     const db = req.app.db;
+//     res.render('settings-menu', {
+//         title: 'Cart menu',
+//         session: req.session,
+//         admin: true,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         menu: sortMenu(await getMenu(db)),
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
 // page list
-router.get('/admin/settings/pages', csrfProtection, restrict, async (req, res) => {
-    const db = req.app.db;
-    const pages = await db.pages.find({}).toArray();
+// router.get('/admin/settings/pages', csrfProtection, restrict, async (req, res) => {
+//     const db = req.app.db;
+//     const pages = await db.pages.find({}).toArray();
 
-    res.render('settings-pages', {
-        title: 'Static pages',
-        pages: pages,
-        session: req.session,
-        admin: true,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        menu: sortMenu(await getMenu(db)),
-        csrfToken: req.csrfToken()
-    });
-});
+//     res.render('settings-pages', {
+//         title: 'Static pages',
+//         pages: pages,
+//         session: req.session,
+//         admin: true,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         menu: sortMenu(await getMenu(db)),
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
-// pages new
-router.get('/admin/settings/pages/new', csrfProtection, restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// // pages new
+// router.get('/admin/settings/pages/new', csrfProtection, restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    res.render('settings-page', {
-        title: 'Static pages',
-        session: req.session,
-        admin: true,
-        button_text: 'Create',
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        menu: sortMenu(await getMenu(db)),
-        csrfToken: req.csrfToken()
-    });
-});
+//     res.render('settings-page', {
+//         title: 'Static pages',
+//         session: req.session,
+//         admin: true,
+//         button_text: 'Create',
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         menu: sortMenu(await getMenu(db)),
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
-// pages editor
-router.get('/admin/settings/pages/edit/:page', csrfProtection, restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
-    const page = await db.pages.findOne({ _id: getId(req.params.page) });
-    const menu = sortMenu(await getMenu(db));
-    if(!page){
-        res.status(404).render('error', {
-            title: '404 Error - Page not found',
-            config: req.app.config,
-            message: '404 Error - Page not found',
-            helpers: req.handlebars.helpers,
-            showFooter: 'showFooter',
-            menu
-        });
-        return;
-    }
+// // pages editor
+// router.get('/admin/settings/pages/edit/:page', csrfProtection, restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
+//     const page = await db.pages.findOne({ _id: getId(req.params.page) });
+//     const menu = sortMenu(await getMenu(db));
+//     if(!page){
+//         res.status(404).render('error', {
+//             title: '404 Error - Page not found',
+//             config: req.app.config,
+//             message: '404 Error - Page not found',
+//             helpers: req.handlebars.helpers,
+//             showFooter: 'showFooter',
+//             menu
+//         });
+//         return;
+//     }
 
-    res.render('settings-page', {
-        title: 'Static pages',
-        page: page,
-        button_text: 'Update',
-        session: req.session,
-        admin: true,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        menu,
-        csrfToken: req.csrfToken()
-    });
-});
+//     res.render('settings-page', {
+//         title: 'Static pages',
+//         page: page,
+//         button_text: 'Update',
+//         session: req.session,
+//         admin: true,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         menu,
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
-// insert/update page
-router.post('/admin/settings/page', restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// // insert/update page
+// router.post('/admin/settings/page', restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    const doc = {
-        pageName: req.body.pageName,
-        pageSlug: req.body.pageSlug,
-        pageEnabled: req.body.pageEnabled,
-        pageContent: req.body.pageContent
-    };
+//     const doc = {
+//         pageName: req.body.pageName,
+//         pageSlug: req.body.pageSlug,
+//         pageEnabled: req.body.pageEnabled,
+//         pageContent: req.body.pageContent
+//     };
 
-    if(req.body.pageId){
-        // existing page
-        const page = await db.pages.findOne({ _id: getId(req.body.pageId) });
-        if(!page){
-            res.status(400).json({ message: 'Page not found' });
-            return;
-        }
+//     if(req.body.pageId){
+//         // existing page
+//         const page = await db.pages.findOne({ _id: getId(req.body.pageId) });
+//         if(!page){
+//             res.status(400).json({ message: 'Page not found' });
+//             return;
+//         }
 
-        try{
-            const updatedPage = await db.pages.findOneAndUpdate({ _id: getId(req.body.pageId) }, { $set: doc }, { returnOriginal: false });
-            res.status(200).json({ message: 'Page updated successfully', pageId: req.body.pageId, page: updatedPage.value });
-        }catch(ex){
-            res.status(400).json({ message: 'Error updating page. Please try again.' });
-        }
-    }else{
-        // insert page
-        try{
-            const newDoc = await db.pages.insertOne(doc);
-            res.status(200).json({ message: 'New page successfully created', pageId: newDoc.insertedId });
-            return;
-        }catch(ex){
-            res.status(400).json({ message: 'Error creating page. Please try again.' });
-        }
-    }
-});
+//         try{
+//             const updatedPage = await db.pages.findOneAndUpdate({ _id: getId(req.body.pageId) }, { $set: doc }, { returnOriginal: false });
+//             res.status(200).json({ message: 'Page updated successfully', pageId: req.body.pageId, page: updatedPage.value });
+//         }catch(ex){
+//             res.status(400).json({ message: 'Error updating page. Please try again.' });
+//         }
+//     }else{
+//         // insert page
+//         try{
+//             const newDoc = await db.pages.insertOne(doc);
+//             res.status(200).json({ message: 'New page successfully created', pageId: newDoc.insertedId });
+//             return;
+//         }catch(ex){
+//             res.status(400).json({ message: 'Error creating page. Please try again.' });
+//         }
+//     }
+// });
 
-// delete a page
-router.post('/admin/settings/page/delete', restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// // delete a page
+// router.post('/admin/settings/page/delete', restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    const page = await db.pages.findOne({ _id: getId(req.body.pageId) });
-    if(!page){
-        res.status(400).json({ message: 'Page not found' });
-        return;
-    }
+//     const page = await db.pages.findOne({ _id: getId(req.body.pageId) });
+//     if(!page){
+//         res.status(400).json({ message: 'Page not found' });
+//         return;
+//     }
 
-    try{
-        await db.pages.deleteOne({ _id: getId(req.body.pageId) }, {});
-        res.status(200).json({ message: 'Page successfully deleted' });
-        return;
-    }catch(ex){
-        res.status(400).json({ message: 'Error deleting page. Please try again.' });
-    }
-});
+//     try{
+//         await db.pages.deleteOne({ _id: getId(req.body.pageId) }, {});
+//         res.status(200).json({ message: 'Page successfully deleted' });
+//         return;
+//     }catch(ex){
+//         res.status(400).json({ message: 'Error deleting page. Please try again.' });
+//     }
+// });
 
-// new menu item
-router.post('/admin/settings/menu/new', restrict, checkAccess, (req, res) => {
-    const result = newMenu(req);
-    if(result === false){
-        res.status(400).json({ message: 'Failed creating menu.' });
-        return;
-    }
-    res.status(200).json({ message: 'Menu created successfully.' });
-});
+// // new menu item
+// router.post('/admin/settings/menu/new', restrict, checkAccess, (req, res) => {
+//     const result = newMenu(req);
+//     if(result === false){
+//         res.status(400).json({ message: 'Failed creating menu.' });
+//         return;
+//     }
+//     res.status(200).json({ message: 'Menu created successfully.' });
+// });
 
-// update existing menu item
-router.post('/admin/settings/menu/update', restrict, checkAccess, (req, res) => {
-    const result = updateMenu(req);
-    if(result === false){
-        res.status(400).json({ message: 'Failed updating menu.' });
-        return;
-    }
-    res.status(200).json({ message: 'Menu updated successfully.' });
-});
+// // update existing menu item
+// router.post('/admin/settings/menu/update', restrict, checkAccess, (req, res) => {
+//     const result = updateMenu(req);
+//     if(result === false){
+//         res.status(400).json({ message: 'Failed updating menu.' });
+//         return;
+//     }
+//     res.status(200).json({ message: 'Menu updated successfully.' });
+// });
 
-// delete menu item
-router.post('/admin/settings/menu/delete', restrict, checkAccess, (req, res) => {
-    const result = deleteMenu(req, req.body.menuId);
-    if(result === false){
-        res.status(400).json({ message: 'Failed deleting menu.' });
-        return;
-    }
-    res.status(200).json({ message: 'Menu deleted successfully.' });
-});
+// // delete menu item
+// router.post('/admin/settings/menu/delete', restrict, checkAccess, (req, res) => {
+//     const result = deleteMenu(req, req.body.menuId);
+//     if(result === false){
+//         res.status(400).json({ message: 'Failed deleting menu.' });
+//         return;
+//     }
+//     res.status(200).json({ message: 'Menu deleted successfully.' });
+// });
 
-// We call this via a Ajax call to save the order from the sortable list
-router.post('/admin/settings/menu/saveOrder', restrict, checkAccess, (req, res) => {
-    const result = orderMenu(req, res);
-    if(result === false){
-        res.status(400).json({ message: 'Failed saving menu order' });
-        return;
-    }
-    res.status(200).json({});
-});
+// // We call this via a Ajax call to save the order from the sortable list
+// router.post('/admin/settings/menu/saveOrder', restrict, checkAccess, (req, res) => {
+//     const result = orderMenu(req, res);
+//     if(result === false){
+//         res.status(400).json({ message: 'Failed saving menu order' });
+//         return;
+//     }
+//     res.status(200).json({});
+// });
 
 // validate the permalink
-router.post('/admin/validatePermalink', async (req, res) => {
-    // if doc id is provided it checks for permalink in any products other that one provided,
-    // else it just checks for any products with that permalink
-    const db = req.app.db;
+// router.post('/admin/validatePermalink', async (req, res) => {
+//     // if doc id is provided it checks for permalink in any products other that one provided,
+//     // else it just checks for any products with that permalink
+//     const db = req.app.db;
 
-    let query = {};
-    if(typeof req.body.docId === 'undefined' || req.body.docId === ''){
-        query = { productPermalink: req.body.permalink };
-    }else{
-        query = { productPermalink: req.body.permalink, _id: { $ne: getId(req.body.docId) } };
-    }
+//     let query = {};
+//     if(typeof req.body.docId === 'undefined' || req.body.docId === ''){
+//         query = { productPermalink: req.body.permalink };
+//     }else{
+//         query = { productPermalink: req.body.permalink, _id: { $ne: getId(req.body.docId) } };
+//     }
 
-    const products = await db.products.countDocuments(query);
-    if(products && products > 0){
-        res.status(400).json({ message: 'Permalink already exists' });
-        return;
-    }
-    res.status(200).json({ message: 'Permalink validated successfully' });
-});
+//     const products = await db.products.countDocuments(query);
+//     if(products && products > 0){
+//         res.status(400).json({ message: 'Permalink already exists' });
+//         return;
+//     }
+//     res.status(200).json({ message: 'Permalink validated successfully' });
+// });
 
-// Discount codes
-router.get('/admin/settings/discounts', csrfProtection, restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// // Discount codes
+// router.get('/admin/settings/discounts', csrfProtection, restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    const discounts = await db.discounts.find({}).toArray();
+//     const discounts = await db.discounts.find({}).toArray();
 
-    res.render('settings-discounts', {
-        title: 'Discount code',
-        config: req.app.config,
-        session: req.session,
-        discounts,
-        admin: true,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        csrfToken: req.csrfToken()
-    });
-});
+//     res.render('settings-discounts', {
+//         title: 'Discount code',
+//         config: req.app.config,
+//         session: req.session,
+//         discounts,
+//         admin: true,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
 // Edit a discount code
-router.get('/admin/settings/discount/edit/:id', csrfProtection, restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// router.get('/admin/settings/discount/edit/:id', csrfProtection, restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    const discount = await db.discounts.findOne({ _id: getId(req.params.id) });
+//     const discount = await db.discounts.findOne({ _id: getId(req.params.id) });
 
-    res.render('settings-discount-edit', {
-        title: 'Discount code edit',
-        session: req.session,
-        admin: true,
-        discount,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        csrfToken: req.csrfToken()
-    });
-});
+//     res.render('settings-discount-edit', {
+//         title: 'Discount code edit',
+//         session: req.session,
+//         admin: true,
+//         discount,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
 // Update discount code
-router.post('/admin/settings/discount/update', restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// router.post('/admin/settings/discount/update', restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-     // Doc to insert
-     const discountDoc = {
-        discountId: req.body.discountId,
-        code: req.body.code,
-        type: req.body.type,
-        value: parseInt(req.body.value),
-        start: moment(req.body.start, 'DD/MM/YYYY HH:mm').toDate(),
-        end: moment(req.body.end, 'DD/MM/YYYY HH:mm').toDate()
-    };
+//      // Doc to insert
+//      const discountDoc = {
+//         discountId: req.body.discountId,
+//         code: req.body.code,
+//         type: req.body.type,
+//         value: parseInt(req.body.value),
+//         start: moment(req.body.start, 'DD/MM/YYYY HH:mm').toDate(),
+//         end: moment(req.body.end, 'DD/MM/YYYY HH:mm').toDate()
+//     };
 
-    // Validate the body again schema
-    const schemaValidate = validateJson('editDiscount', discountDoc);
-    if(!schemaValidate.result){
-        res.status(400).json(schemaValidate.errors);
-        return;
-    }
+//     // Validate the body again schema
+//     const schemaValidate = validateJson('editDiscount', discountDoc);
+//     if(!schemaValidate.result){
+//         res.status(400).json(schemaValidate.errors);
+//         return;
+//     }
 
-    // Check start is after today
-    if(moment(discountDoc.start).isBefore(moment())){
-        res.status(400).json({ message: 'Discount start date needs to be after today' });
-        return;
-    }
+//     // Check start is after today
+//     if(moment(discountDoc.start).isBefore(moment())){
+//         res.status(400).json({ message: 'Discount start date needs to be after today' });
+//         return;
+//     }
 
-    // Check end is after the start
-    if(!moment(discountDoc.end).isAfter(moment(discountDoc.start))){
-        res.status(400).json({ message: 'Discount end date needs to be after start date' });
-        return;
-    }
+//     // Check end is after the start
+//     if(!moment(discountDoc.end).isAfter(moment(discountDoc.start))){
+//         res.status(400).json({ message: 'Discount end date needs to be after start date' });
+//         return;
+//     }
 
-    // Check if code exists
-    const checkCode = await db.discounts.countDocuments({
-        code: discountDoc.code,
-        _id: { $ne: getId(discountDoc.discountId) }
-    });
-    if(checkCode){
-        res.status(400).json({ message: 'Discount code already exists' });
-        return;
-    }
+//     // Check if code exists
+//     const checkCode = await db.discounts.countDocuments({
+//         code: discountDoc.code,
+//         _id: { $ne: getId(discountDoc.discountId) }
+//     });
+//     if(checkCode){
+//         res.status(400).json({ message: 'Discount code already exists' });
+//         return;
+//     }
 
-    // Remove discountID
-    delete discountDoc.discountId;
+//     // Remove discountID
+//     delete discountDoc.discountId;
 
-    try{
-        await db.discounts.updateOne({ _id: getId(req.body.discountId) }, { $set: discountDoc }, {});
-        res.status(200).json({ message: 'Successfully saved', discount: discountDoc });
-    }catch(ex){
-        res.status(400).json({ message: 'Failed to save. Please try again' });
-    }
-});
+//     try{
+//         await db.discounts.updateOne({ _id: getId(req.body.discountId) }, { $set: discountDoc }, {});
+//         res.status(200).json({ message: 'Successfully saved', discount: discountDoc });
+//     }catch(ex){
+//         res.status(400).json({ message: 'Failed to save. Please try again' });
+//     }
+// });
 
-// Create a discount code
-router.get('/admin/settings/discount/new', csrfProtection, restrict, checkAccess, async (req, res) => {
-    res.render('settings-discount-new', {
-        title: 'Discount code create',
-        session: req.session,
-        admin: true,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        config: req.app.config,
-        csrfToken: req.csrfToken()
-    });
-});
+// // Create a discount code
+// router.get('/admin/settings/discount/new', csrfProtection, restrict, checkAccess, async (req, res) => {
+//     res.render('settings-discount-new', {
+//         title: 'Discount code create',
+//         session: req.session,
+//         admin: true,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         config: req.app.config,
+//         csrfToken: req.csrfToken()
+//     });
+// });
 
-// Create a discount code
-router.post('/admin/settings/discount/create', csrfProtection, restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// // Create a discount code
+// router.post('/admin/settings/discount/create', csrfProtection, restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    // Doc to insert
-    const discountDoc = {
-        code: req.body.code,
-        type: req.body.type,
-        value: parseInt(req.body.value),
-        start: moment(req.body.start, 'DD/MM/YYYY HH:mm').toDate(),
-        end: moment(req.body.end, 'DD/MM/YYYY HH:mm').toDate()
-    };
+//     // Doc to insert
+//     const discountDoc = {
+//         code: req.body.code,
+//         type: req.body.type,
+//         value: parseInt(req.body.value),
+//         start: moment(req.body.start, 'DD/MM/YYYY HH:mm').toDate(),
+//         end: moment(req.body.end, 'DD/MM/YYYY HH:mm').toDate()
+//     };
 
-    // Validate the body again schema
-    const schemaValidate = validateJson('newDiscount', discountDoc);
-    if(!schemaValidate.result){
-        res.status(400).json(schemaValidate.errors);
-        return;
-    }
+//     // Validate the body again schema
+//     const schemaValidate = validateJson('newDiscount', discountDoc);
+//     if(!schemaValidate.result){
+//         res.status(400).json(schemaValidate.errors);
+//         return;
+//     }
 
-    // Check if code exists
-    const checkCode = await db.discounts.countDocuments({
-        code: discountDoc.code
-    });
-    if(checkCode){
-        res.status(400).json({ message: 'Discount code already exists' });
-        return;
-    }
+//     // Check if code exists
+//     const checkCode = await db.discounts.countDocuments({
+//         code: discountDoc.code
+//     });
+//     if(checkCode){
+//         res.status(400).json({ message: 'Discount code already exists' });
+//         return;
+//     }
 
-    // Check start is after today
-    if(moment(discountDoc.start).isBefore(moment())){
-        res.status(400).json({ message: 'Discount start date needs to be after today' });
-        return;
-    }
+//     // Check start is after today
+//     if(moment(discountDoc.start).isBefore(moment())){
+//         res.status(400).json({ message: 'Discount start date needs to be after today' });
+//         return;
+//     }
 
-    // Check end is after the start
-    if(!moment(discountDoc.end).isAfter(moment(discountDoc.start))){
-        res.status(400).json({ message: 'Discount end date needs to be after start date' });
-        return;
-    }
+//     // Check end is after the start
+//     if(!moment(discountDoc.end).isAfter(moment(discountDoc.start))){
+//         res.status(400).json({ message: 'Discount end date needs to be after start date' });
+//         return;
+//     }
 
-    // Insert discount code
-    const discount = await db.discounts.insertOne(discountDoc);
-    res.status(200).json({ message: 'Discount code created successfully', discountId: discount.insertedId });
-});
+//     // Insert discount code
+//     const discount = await db.discounts.insertOne(discountDoc);
+//     res.status(200).json({ message: 'Discount code created successfully', discountId: discount.insertedId });
+// });
 
-// Delete discount code
-router.delete('/admin/settings/discount/delete', restrict, checkAccess, async (req, res) => {
-    const db = req.app.db;
+// // Delete discount code
+// router.delete('/admin/settings/discount/delete', restrict, checkAccess, async (req, res) => {
+//     const db = req.app.db;
 
-    try{
-        await db.discounts.deleteOne({ _id: getId(req.body.discountId) }, {});
-        res.status(200).json({ message: 'Discount code successfully deleted' });
-        return;
-    }catch(ex){
-        res.status(400).json({ message: 'Error deleting discount code. Please try again.' });
-    }
-});
+//     try{
+//         await db.discounts.deleteOne({ _id: getId(req.body.discountId) }, {});
+//         res.status(200).json({ message: 'Discount code successfully deleted' });
+//         return;
+//     }catch(ex){
+//         res.status(400).json({ message: 'Error deleting discount code. Please try again.' });
+//     }
+// });
 
 // Add image by URL
 router.post('/admin/file/url', restrict, checkAccess, async (req, res) => {

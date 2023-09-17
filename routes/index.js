@@ -53,359 +53,359 @@ router.get('/googleproducts.xml', async (req, res, next) => {
 });
 
 // These is the customer facing routes
-router.get('/payment/:orderId', async (req, res, next) => {
-    const db = req.app.db;
-    const config = req.app.config;
+// router.get('/payment/:orderId', async (req, res, next) => {
+//     const db = req.app.db;
+//     const config = req.app.config;
 
-    // Get the order
-    const order = await db.orders.findOne({ _id: getId(req.params.orderId) });
-    if(!order){
-        res.render('error', { title: 'Not found', message: 'Order not found', helpers: req.handlebars.helpers, config });
-        return;
-    }
+//     // Get the order
+//     const order = await db.orders.findOne({ _id: getId(req.params.orderId) });
+//     if(!order){
+//         res.render('error', { title: 'Not found', message: 'Order not found', helpers: req.handlebars.helpers, config });
+//         return;
+//     }
 
-    // If stock management is turned on payment approved update stock level
-    if(config.trackStock && req.session.paymentApproved){
-        // Check to see if already updated to avoid duplicate updating of stock
-        if(order.productStockUpdated !== true){
-            Object.keys(order.orderProducts).forEach(async (productKey) => {
-                const product = order.orderProducts[productKey];
-                const dbProduct = await db.products.findOne({ _id: getId(product.productId) });
-                let productCurrentStock = dbProduct.productStock;
+//     // If stock management is turned on payment approved update stock level
+//     if(config.trackStock && req.session.paymentApproved){
+//         // Check to see if already updated to avoid duplicate updating of stock
+//         if(order.productStockUpdated !== true){
+//             Object.keys(order.orderProducts).forEach(async (productKey) => {
+//                 const product = order.orderProducts[productKey];
+//                 const dbProduct = await db.products.findOne({ _id: getId(product.productId) });
+//                 let productCurrentStock = dbProduct.productStock;
 
-                // If variant, get the stock from the variant
-                if(product.variantId){
-                    const variant = await db.variants.findOne({
-                        _id: getId(product.variantId),
-                        product: getId(product._id)
-                    });
-                    if(variant){
-                        productCurrentStock = variant.stock;
-                    }else{
-                        productCurrentStock = 0;
-                    }
-                }
+//                 // If variant, get the stock from the variant
+//                 if(product.variantId){
+//                     const variant = await db.variants.findOne({
+//                         _id: getId(product.variantId),
+//                         product: getId(product._id)
+//                     });
+//                     if(variant){
+//                         productCurrentStock = variant.stock;
+//                     }else{
+//                         productCurrentStock = 0;
+//                     }
+//                 }
 
-                // Calc the new stock level
-                let newStockLevel = productCurrentStock - product.quantity;
-                if(newStockLevel < 1){
-                    newStockLevel = 0;
-                }
+//                 // Calc the new stock level
+//                 let newStockLevel = productCurrentStock - product.quantity;
+//                 if(newStockLevel < 1){
+//                     newStockLevel = 0;
+//                 }
 
-                // Update stock
-                if(product.variantId){
-                    // Update variant stock
-                    await db.variants.updateOne({
-                        _id: getId(product.variantId)
-                    }, {
-                        $set: {
-                            stock: newStockLevel
-                        }
-                    }, { multi: false });
-                }else{
-                    // Update product stock
-                    await db.products.updateOne({
-                        _id: getId(product.productId)
-                    }, {
-                        $set: {
-                            productStock: newStockLevel
-                        }
-                    }, { multi: false });
-                }
+//                 // Update stock
+//                 if(product.variantId){
+//                     // Update variant stock
+//                     await db.variants.updateOne({
+//                         _id: getId(product.variantId)
+//                     }, {
+//                         $set: {
+//                             stock: newStockLevel
+//                         }
+//                     }, { multi: false });
+//                 }else{
+//                     // Update product stock
+//                     await db.products.updateOne({
+//                         _id: getId(product.productId)
+//                     }, {
+//                         $set: {
+//                             productStock: newStockLevel
+//                         }
+//                     }, { multi: false });
+//                 }
 
-                // Add stock updated flag to order
-                await db.orders.updateOne({
-                    _id: getId(order._id)
-                }, {
-                    $set: {
-                        productStockUpdated: true
-                    }
-                }, { multi: false });
-            });
-            console.info('Updated stock levels');
-        }
-    }
+//                 // Add stock updated flag to order
+//                 await db.orders.updateOne({
+//                     _id: getId(order._id)
+//                 }, {
+//                     $set: {
+//                         productStockUpdated: true
+//                     }
+//                 }, { multi: false });
+//             });
+//             console.info('Updated stock levels');
+//         }
+//     }
 
-    // If hooks are configured and the hook has not already been sent, send hook
-    if(config.orderHook && !order.hookSent){
-        await hooker(order);
-        await db.orders.updateOne({
-            _id: getId(order._id)
-        }, {
-            $set: {
-                hookSent: true
-            }
-        }, { multi: false });
-    };
+//     // If hooks are configured and the hook has not already been sent, send hook
+//     if(config.orderHook && !order.hookSent){
+//         await hooker(order);
+//         await db.orders.updateOne({
+//             _id: getId(order._id)
+//         }, {
+//             $set: {
+//                 hookSent: true
+//             }
+//         }, { multi: false });
+//     };
 
-    let paymentView = `${config.themeViews}payment-complete`;
-    if(order.orderPaymentGateway === 'Blockonomics') paymentView = `${config.themeViews}payment-complete-blockonomics`;
-    res.render(paymentView, {
-        title: 'Payment complete',
-        config: req.app.config,
-        session: req.session,
-        result: order,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        showFooter: 'showFooter',
-        menu: sortMenu(await getMenu(db))
-    });
-});
+//     let paymentView = `${config.themeViews}payment-complete`;
+//     if(order.orderPaymentGateway === 'Blockonomics') paymentView = `${config.themeViews}payment-complete-blockonomics`;
+//     res.render(paymentView, {
+//         title: 'Payment complete',
+//         config: req.app.config,
+//         session: req.session,
+//         result: order,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         showFooter: 'showFooter',
+//         menu: sortMenu(await getMenu(db))
+//     });
+// });
 
 router.get('/emptycart', async (req, res, next) => {
     emptyCart(req, res, '');
 });
 
-router.get('/checkout/information', async (req, res, next) => {
-    const config = req.app.config;
+// router.get('/checkout/information', async (req, res, next) => {
+//     const config = req.app.config;
 
-    // if there is no items in the cart then render a failure
-    if(!req.session.cart){
-        req.session.message = 'The are no items in your cart. Please add some items before checking out';
-        req.session.messageType = 'danger';
-        res.redirect('/');
-        return;
-    }
+//     // if there is no items in the cart then render a failure
+//     if(!req.session.cart){
+//         req.session.message = 'The are no items in your cart. Please add some items before checking out';
+//         req.session.messageType = 'danger';
+//         res.redirect('/');
+//         return;
+//     }
 
-    let paymentType = '';
-    if(req.session.cartSubscription){
-        paymentType = '_subscription';
-    }
+//     let paymentType = '';
+//     if(req.session.cartSubscription){
+//         paymentType = '_subscription';
+//     }
 
-    // render the payment page
-    res.render(`${config.themeViews}checkout-information`, {
-        title: 'Checkout - Information',
-        config: req.app.config,
-        session: req.session,
-        paymentType,
-        cartClose: false,
-        page: 'checkout-information',
-        countryList,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        showFooter: 'showFooter'
-    });
-});
+//     // render the payment page
+//     res.render(`${config.themeViews}checkout-information`, {
+//         title: 'Checkout - Information',
+//         config: req.app.config,
+//         session: req.session,
+//         paymentType,
+//         cartClose: false,
+//         page: 'checkout-information',
+//         countryList,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         showFooter: 'showFooter'
+//     });
+// });
 
-router.get('/checkout/shipping', async (req, res, next) => {
-    const config = req.app.config;
+// router.get('/checkout/shipping', async (req, res, next) => {
+//     const config = req.app.config;
 
-    // if there is no items in the cart then render a failure
-    if(!req.session.cart){
-        req.session.message = 'The are no items in your cart. Please add some items before checking out';
-        req.session.messageType = 'danger';
-        res.redirect('/');
-        return;
-    }
+//     // if there is no items in the cart then render a failure
+//     if(!req.session.cart){
+//         req.session.message = 'The are no items in your cart. Please add some items before checking out';
+//         req.session.messageType = 'danger';
+//         res.redirect('/');
+//         return;
+//     }
 
-    if(!req.session.customerEmail){
-        req.session.message = 'Cannot proceed to shipping without customer information';
-        req.session.messageType = 'danger';
-        res.redirect('/checkout/information');
-        return;
-    }
+//     if(!req.session.customerEmail){
+//         req.session.message = 'Cannot proceed to shipping without customer information';
+//         req.session.messageType = 'danger';
+//         res.redirect('/checkout/information');
+//         return;
+//     }
 
-    // Net cart amount
-    const netCartAmount = req.session.totalCartAmount - req.session.totalCartShipping || 0;
+//     // Net cart amount
+//     const netCartAmount = req.session.totalCartAmount - req.session.totalCartShipping || 0;
 
-    // Recalculate shipping
-    config.modules.loaded.shipping.calculateShipping(
-        netCartAmount,
-        config,
-        req
-    );
+//     // Recalculate shipping
+//     config.modules.loaded.shipping.calculateShipping(
+//         netCartAmount,
+//         config,
+//         req
+//     );
 
-    // render the payment page
-    res.render(`${config.themeViews}checkout-shipping`, {
-        title: 'Checkout - Shipping',
-        config: req.app.config,
-        session: req.session,
-        cartClose: false,
-        cartReadOnly: true,
-        page: 'checkout-shipping',
-        countryList,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        showFooter: 'showFooter'
-    });
-});
+//     // render the payment page
+//     res.render(`${config.themeViews}checkout-shipping`, {
+//         title: 'Checkout - Shipping',
+//         config: req.app.config,
+//         session: req.session,
+//         cartClose: false,
+//         cartReadOnly: true,
+//         page: 'checkout-shipping',
+//         countryList,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         showFooter: 'showFooter'
+//     });
+// });
 
-router.get('/checkout/cart', (req, res) => {
-    const config = req.app.config;
+// router.get('/checkout/cart', (req, res) => {
+//     const config = req.app.config;
 
-    res.render(`${config.themeViews}checkout-cart`, {
-        title: 'Checkout - Cart',
-        page: req.query.path,
-        config,
-        session: req.session,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        showFooter: 'showFooter'
-    });
-});
+//     res.render(`${config.themeViews}checkout-cart`, {
+//         title: 'Checkout - Cart',
+//         page: req.query.path,
+//         config,
+//         session: req.session,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         showFooter: 'showFooter'
+//     });
+// });
 
-router.get('/checkout/cartdata', (req, res) => {
-    const config = req.app.config;
+// router.get('/checkout/cartdata', (req, res) => {
+//     const config = req.app.config;
 
-    res.status(200).json({
-        cart: req.session.cart,
-        session: req.session,
-        currencySymbol: config.currencySymbol || '$'
-    });
-});
+//     res.status(200).json({
+//         cart: req.session.cart,
+//         session: req.session,
+//         currencySymbol: config.currencySymbol || '$'
+//     });
+// });
 
-router.get('/checkout/payment', async (req, res) => {
-    const config = req.app.config;
+// router.get('/checkout/payment', async (req, res) => {
+//     const config = req.app.config;
 
-    // if there is no items in the cart then render a failure
-    if(!req.session.cart){
-        req.session.message = 'The are no items in your cart. Please add some items before checking out';
-        req.session.messageType = 'danger';
-        res.redirect('/');
-        return;
-    }
+//     // if there is no items in the cart then render a failure
+//     if(!req.session.cart){
+//         req.session.message = 'The are no items in your cart. Please add some items before checking out';
+//         req.session.messageType = 'danger';
+//         res.redirect('/');
+//         return;
+//     }
 
-    let paymentType = '';
-    if(req.session.cartSubscription){
-        paymentType = '_subscription';
-    }
+//     let paymentType = '';
+//     if(req.session.cartSubscription){
+//         paymentType = '_subscription';
+//     }
 
-    // update total cart amount one last time before payment
-    await updateTotalCart(req, res);
+//     // update total cart amount one last time before payment
+//     await updateTotalCart(req, res);
 
-    // Setup verifone if configured
-    let verifone = {};
-    if(config.paymentGateway.includes('verifone')){
-        verifone = await setupVerifone(req);
-        req.session.verifoneCheckout = verifone.id;
-    }
+//     // Setup verifone if configured
+//     let verifone = {};
+//     if(config.paymentGateway.includes('verifone')){
+//         verifone = await setupVerifone(req);
+//         req.session.verifoneCheckout = verifone.id;
+//     }
 
-    res.render(`${config.themeViews}checkout-payment`, {
-        title: 'Checkout - Payment',
-        config: req.app.config,
-        paymentConfig: getPaymentConfig(),
-        verifone,
-        session: req.session,
-        paymentPage: true,
-        paymentType,
-        cartClose: true,
-        cartReadOnly: true,
-        page: 'checkout-information',
-        countryList,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        showFooter: 'showFooter'
-    });
-});
+//     res.render(`${config.themeViews}checkout-payment`, {
+//         title: 'Checkout - Payment',
+//         config: req.app.config,
+//         paymentConfig: getPaymentConfig(),
+//         verifone,
+//         session: req.session,
+//         paymentPage: true,
+//         paymentType,
+//         cartClose: true,
+//         cartReadOnly: true,
+//         page: 'checkout-information',
+//         countryList,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         showFooter: 'showFooter'
+//     });
+// });
 
-router.get('/blockonomics_payment', (req, res, next) => {
-    const config = req.app.config;
-    let paymentType = '';
-    if(req.session.cartSubscription){
-        paymentType = '_subscription';
-    }
+// router.get('/blockonomics_payment', (req, res, next) => {
+//     const config = req.app.config;
+//     let paymentType = '';
+//     if(req.session.cartSubscription){
+//         paymentType = '_subscription';
+//     }
 
-    // show bitcoin address and wait for payment, subscribing to wss
-    res.render(`${config.themeViews}checkout-blockonomics`, {
-        title: 'Checkout - Payment',
-        config: req.app.config,
-        paymentConfig: getPaymentConfig(),
-        session: req.session,
-        paymentPage: true,
-        paymentType,
-        cartClose: true,
-        cartReadOnly: true,
-        page: 'checkout-information',
-        countryList,
-        message: clearSessionValue(req.session, 'message'),
-        messageType: clearSessionValue(req.session, 'messageType'),
-        helpers: req.handlebars.helpers,
-        showFooter: 'showFooter'
-    });
-});
+//     // show bitcoin address and wait for payment, subscribing to wss
+//     res.render(`${config.themeViews}checkout-blockonomics`, {
+//         title: 'Checkout - Payment',
+//         config: req.app.config,
+//         paymentConfig: getPaymentConfig(),
+//         session: req.session,
+//         paymentPage: true,
+//         paymentType,
+//         cartClose: true,
+//         cartReadOnly: true,
+//         page: 'checkout-information',
+//         countryList,
+//         message: clearSessionValue(req.session, 'message'),
+//         messageType: clearSessionValue(req.session, 'messageType'),
+//         helpers: req.handlebars.helpers,
+//         showFooter: 'showFooter'
+//     });
+// });
 
-router.post('/checkout/adddiscountcode', async (req, res) => {
-    const config = req.app.config;
-    const db = req.app.db;
+// router.post('/checkout/adddiscountcode', async (req, res) => {
+//     const config = req.app.config;
+//     const db = req.app.db;
 
-    // if there is no items in the cart return a failure
-    if(!req.session.cart){
-        res.status(400).json({
-            message: 'The are no items in your cart.'
-        });
-        return;
-    }
+//     // if there is no items in the cart return a failure
+//     if(!req.session.cart){
+//         res.status(400).json({
+//             message: 'The are no items in your cart.'
+//         });
+//         return;
+//     }
 
-    // Check if the discount module is loaded
-    if(!config.modules.loaded.discount){
-        res.status(400).json({
-            message: 'Access denied.'
-        });
-        return;
-    }
+//     // Check if the discount module is loaded
+//     if(!config.modules.loaded.discount){
+//         res.status(400).json({
+//             message: 'Access denied.'
+//         });
+//         return;
+//     }
 
-    // Check defined or null
-    if(!req.body.discountCode || req.body.discountCode === ''){
-        res.status(400).json({
-            message: 'Discount code is invalid or expired'
-        });
-        return;
-    }
+//     // Check defined or null
+//     if(!req.body.discountCode || req.body.discountCode === ''){
+//         res.status(400).json({
+//             message: 'Discount code is invalid or expired'
+//         });
+//         return;
+//     }
 
-    // Validate discount code
-    const discount = await db.discounts.findOne({ code: req.body.discountCode });
-    if(!discount){
-        res.status(400).json({
-            message: 'Discount code is invalid or expired'
-        });
-        return;
-    }
+//     // Validate discount code
+//     const discount = await db.discounts.findOne({ code: req.body.discountCode });
+//     if(!discount){
+//         res.status(400).json({
+//             message: 'Discount code is invalid or expired'
+//         });
+//         return;
+//     }
 
-    // Validate date validity
-    if(!moment().isBetween(moment(discount.start), moment(discount.end))){
-        res.status(400).json({
-            message: 'Discount is expired'
-        });
-        return;
-    }
+//     // Validate date validity
+//     if(!moment().isBetween(moment(discount.start), moment(discount.end))){
+//         res.status(400).json({
+//             message: 'Discount is expired'
+//         });
+//         return;
+//     }
 
-    // Set the discount code
-    req.session.discountCode = discount.code;
+//     // Set the discount code
+//     req.session.discountCode = discount.code;
 
-    // Update the cart amount
-    await updateTotalCart(req, res);
+//     // Update the cart amount
+//     await updateTotalCart(req, res);
 
-    // Return the message
-    res.status(200).json({
-        message: 'Discount code applied'
-    });
-});
+//     // Return the message
+//     res.status(200).json({
+//         message: 'Discount code applied'
+//     });
+// });
 
-router.post('/checkout/removediscountcode', async (req, res) => {
-    // if there is no items in the cart return a failure
-    if(!req.session.cart){
-        res.status(400).json({
-            message: 'The are no items in your cart.'
-        });
-        return;
-    }
+// router.post('/checkout/removediscountcode', async (req, res) => {
+//     // if there is no items in the cart return a failure
+//     if(!req.session.cart){
+//         res.status(400).json({
+//             message: 'The are no items in your cart.'
+//         });
+//         return;
+//     }
 
-    // Delete the discount code
-    delete req.session.discountCode;
+//     // Delete the discount code
+//     delete req.session.discountCode;
 
-    // update total cart amount
-    await updateTotalCart(req, res);
+//     // update total cart amount
+//     await updateTotalCart(req, res);
 
-    // Return the message
-    res.status(200).json({
-        message: 'Discount code removed'
-    });
-});
+//     // Return the message
+//     res.status(200).json({
+//         message: 'Discount code removed'
+//     });
+// });
 
 // show an individual product
 router.get('/product/:id', async (req, res) => {
@@ -849,143 +849,143 @@ router.post('/product/addtocart', async (req, res, next) => {
 });
 
 // Totally empty the cart
-router.post('/product/addreview', async (req, res, next) => {
-    const config = req.app.config;
+// router.post('/product/addreview', async (req, res, next) => {
+//     const config = req.app.config;
 
-    // Check if module enabled
-    if(config.modules.enabled.reviews){
-        // Check if a customer is logged in
-        if(!req.session.customerPresent){
-            return res.status(400).json({
-                message: 'You need to be logged in to create a review'
-            });
-        }
+//     // Check if module enabled
+//     if(config.modules.enabled.reviews){
+//         // Check if a customer is logged in
+//         if(!req.session.customerPresent){
+//             return res.status(400).json({
+//                 message: 'You need to be logged in to create a review'
+//             });
+//         }
 
-        // Validate inputs
-        if(!req.body.title){
-            return res.status(400).json({
-                message: 'Please supply a review title'
-            });
-        }
-        if(!req.body.description){
-            return res.status(400).json({
-                message: 'Please supply a review description'
-            });
-        }
-        if(!req.body.rating){
-            return res.status(400).json({
-                message: 'Please supply a review rating'
-            });
-        }
+//         // Validate inputs
+//         if(!req.body.title){
+//             return res.status(400).json({
+//                 message: 'Please supply a review title'
+//             });
+//         }
+//         if(!req.body.description){
+//             return res.status(400).json({
+//                 message: 'Please supply a review description'
+//             });
+//         }
+//         if(!req.body.rating){
+//             return res.status(400).json({
+//                 message: 'Please supply a review rating'
+//             });
+//         }
 
-        // Sanitize inputs
-        req.body.title = stripHtml(req.body.title);
-        req.body.description = stripHtml(req.body.description);
+//         // Sanitize inputs
+//         req.body.title = stripHtml(req.body.title);
+//         req.body.description = stripHtml(req.body.description);
 
-        // Validate length
-        if(req.body.title.length > 50){
-            return res.status(400).json({
-                message: 'Review title is too long'
-            });
-        }
-        if(req.body.description.length > 200){
-            return res.status(400).json({
-                message: 'Review description is too long'
-            });
-        }
+//         // Validate length
+//         if(req.body.title.length > 50){
+//             return res.status(400).json({
+//                 message: 'Review title is too long'
+//             });
+//         }
+//         if(req.body.description.length > 200){
+//             return res.status(400).json({
+//                 message: 'Review description is too long'
+//             });
+//         }
 
-        // Check rating is within range
-        try{
-            const rating = parseInt(req.body.rating);
-            if(rating < 0 || rating > 5){
-                return res.status(400).json({
-                    message: 'Please supply a valid rating'
-                });
-            }
+//         // Check rating is within range
+//         try{
+//             const rating = parseInt(req.body.rating);
+//             if(rating < 0 || rating > 5){
+//                 return res.status(400).json({
+//                     message: 'Please supply a valid rating'
+//                 });
+//             }
 
-            // Check for failed Int conversion
-            if(isNaN(rating)){
-                return res.status(400).json({
-                    message: 'Please supply a valid rating'
-                });
-            }
+//             // Check for failed Int conversion
+//             if(isNaN(rating)){
+//                 return res.status(400).json({
+//                     message: 'Please supply a valid rating'
+//                 });
+//             }
 
-            // Set rating to be numeric
-            req.body.rating = rating;
-        }catch(ex){
-            return res.status(400).json({
-                message: 'Please supply a valid rating'
-            });
-        }
+//             // Set rating to be numeric
+//             req.body.rating = rating;
+//         }catch(ex){
+//             return res.status(400).json({
+//                 message: 'Please supply a valid rating'
+//             });
+//         }
 
-        // Checks passed, create the review
-        const response = await createReview(req);
-        if(response.error){
-            return res.status(400).json({
-                message: response.error
-            });
-        }
-        return res.json({
-            message: 'Review successfully submitted'
-        });
-    }
-    return res.status(400).json({
-        message: 'Unable to submit review'
-    });
-});
+//         // Checks passed, create the review
+//         const response = await createReview(req);
+//         if(response.error){
+//             return res.status(400).json({
+//                 message: response.error
+//             });
+//         }
+//         return res.json({
+//             message: 'Review successfully submitted'
+//         });
+//     }
+//     return res.status(400).json({
+//         message: 'Unable to submit review'
+//     });
+// });
 
 // search products
-router.get('/search/:searchTerm/:pageNum?', (req, res) => {
-    const db = req.app.db;
-    const searchTerm = req.params.searchTerm;
-    const productsIndex = req.app.productsIndex;
-    const config = req.app.config;
-    const numberProducts = config.productsPerPage ? config.productsPerPage : 6;
+// router.get('/search/:searchTerm/:pageNum?', (req, res) => {
+//     const db = req.app.db;
+//     const searchTerm = req.params.searchTerm;
+//     const productsIndex = req.app.productsIndex;
+//     const config = req.app.config;
+//     const numberProducts = config.productsPerPage ? config.productsPerPage : 6;
 
-    const lunrIdArray = [];
-    productsIndex.search(searchTerm).forEach((id) => {
-        lunrIdArray.push(getId(id.ref));
-    });
+//     const lunrIdArray = [];
+//     productsIndex.search(searchTerm).forEach((id) => {
+//         lunrIdArray.push(getId(id.ref));
+//     });
 
-    let pageNum = 1;
-    if(req.params.pageNum){
-        pageNum = req.params.pageNum;
-    }
+//     let pageNum = 1;
+//     if(req.params.pageNum){
+//         pageNum = req.params.pageNum;
+//     }
 
-    Promise.all([
-        paginateProducts(true, db, pageNum, { _id: { $in: lunrIdArray } }, getSort()),
-        getMenu(db)
-    ])
-    .then(([results, menu]) => {
-        // If JSON query param return json instead
-        if(req.query.json === 'true'){
-            res.status(200).json(results.data);
-            return;
-        }
+//     Promise.all([
+//         paginateProducts(true, db, pageNum, { _id: { $in: lunrIdArray } }, getSort()),
+//         getMenu(db)
+//     ])
+//     .then(([results, menu]) => {
+//         // If JSON query param return json instead
+//         if(req.query.json === 'true'){
+//             res.status(200).json(results.data);
+//             return;
+//         }
 
-        res.render(`${config.themeViews}index`, {
-            title: 'Results',
-            results: results.data,
-            filtered: true,
-            session: req.session,
-            metaDescription: `${req.app.config.cartTitle} - Search term: ${searchTerm}`,
-            searchTerm: searchTerm,
-            message: clearSessionValue(req.session, 'message'),
-            messageType: clearSessionValue(req.session, 'messageType'),
-            productsPerPage: numberProducts,
-            totalProductCount: results.totalItems,
-            pageNum: pageNum,
-            paginateUrl: 'search',
-            config: config,
-            menu: sortMenu(menu),
-            helpers: req.handlebars.helpers,
-            showFooter: 'showFooter'
-        });
-    })
-    .catch((err) => {
-        console.error(colors.red('Error searching for products', err));
-    });
-});
+//         res.render(`${config.themeViews}index`, {
+//             title: 'Results',
+//             results: results.data,
+//             filtered: true,
+//             session: req.session,
+//             metaDescription: `${req.app.config.cartTitle} - Search term: ${searchTerm}`,
+//             searchTerm: searchTerm,
+//             message: clearSessionValue(req.session, 'message'),
+//             messageType: clearSessionValue(req.session, 'messageType'),
+//             productsPerPage: numberProducts,
+//             totalProductCount: results.totalItems,
+//             pageNum: pageNum,
+//             paginateUrl: 'search',
+//             config: config,
+//             menu: sortMenu(menu),
+//             helpers: req.handlebars.helpers,
+//             showFooter: 'showFooter'
+//         });
+//     })
+//     .catch((err) => {
+//         console.error(colors.red('Error searching for products', err));
+//     });
+// });
 
 // search products
 router.get('/category/:cat/:pageNum?', (req, res) => {
@@ -1044,10 +1044,10 @@ router.get('/category/:cat/:pageNum?', (req, res) => {
 });
 
 // Language setup in cookie
-router.get('/lang/:locale', (req, res) => {
-    res.cookie('locale', req.params.locale, { maxAge: 900000, httpOnly: true });
-    res.redirect('back');
-});
+// router.get('/lang/:locale', (req, res) => {
+//     res.cookie('locale', req.params.locale, { maxAge: 900000, httpOnly: true });
+//     res.redirect('back');
+// });
 
 // return sitemap
 router.get('/sitemap.xml', (req, res, next) => {
